@@ -1,0 +1,124 @@
+<!-- index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Smart Canteen</title>
+  <link rel="stylesheet" href="style.css" />
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore.js"></script>
+  <script defer src="firebase-config.js"></script>
+  <script defer src="script.js"></script>
+</head>
+<body>
+  <div id="login-container">
+    <h1>Smart Canteen</h1>
+    <button id="login-btn">Sign in with Google</button>
+  </div>
+  <div id="order-container" style="display:none">
+    <h2>Welcome, <span id="user-name"></span></h2>
+
+    <form id="order-form">
+      <label for="year">Year Group:</label>
+      <select id="year" required>
+        <option value="">--Select--</option>
+        <option value="9">Year 9</option>
+        <option value="10">Year 10</option>
+        <option value="11">Year 11</option>
+        <option value="12">Year 12</option>
+        <option value="13">Year 13</option>
+      </select><br />
+
+      <label for="class">Class:</label>
+      <input type="text" id="class" required /><br />
+
+      <label for="period">Delivery Period:</label>
+      <select id="period" required>
+        <option value="">--Select--</option>
+        <option value="Period 2">Period 2 (Before Interval)</option>
+        <option value="Period 4">Period 4 (Before Lunch)</option>
+      </select><br />
+
+      <h3>Menu</h3>
+      <label><input type="checkbox" name="item" value="Burger"> Burger</label><br />
+      <label><input type="checkbox" name="item" value="Sandwich"> Sandwich</label><br />
+      <label><input type="checkbox" name="item" value="Fruit Cup"> Fruit Cup</label><br />
+      <label><input type="checkbox" name="item" value="Juice Box"> Juice Box</label><br />
+
+      <button type="submit">Place Order</button>
+    </form>
+  </div>
+</body>
+</html>
+
+<!-- style.css -->
+body {
+  font-family: Arial, sans-serif;
+  background: #f8f9fa;
+  color: #333;
+  text-align: center;
+  padding: 20px;
+}
+#login-container, #order-container {
+  max-width: 500px;
+  margin: auto;
+  background: white;
+  padding: 20px;
+  border-radius: 10px;
+  box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+<!-- firebase-config.js -->
+const firebaseConfig = {
+  apiKey: "YOUR_API_KEY",
+  authDomain: "YOUR_AUTH_DOMAIN",
+  projectId: "YOUR_PROJECT_ID",
+  storageBucket: "YOUR_STORAGE_BUCKET",
+  messagingSenderId: "YOUR_MSG_ID",
+  appId: "YOUR_APP_ID"
+};
+
+const app = firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+<!-- script.js -->
+document.getElementById('login-btn').addEventListener('click', () => {
+  const provider = new firebase.auth.GoogleAuthProvider();
+  auth.signInWithPopup(provider)
+    .then(result => {
+      document.getElementById('login-container').style.display = 'none';
+      document.getElementById('order-container').style.display = 'block';
+      document.getElementById('user-name').textContent = result.user.displayName;
+    });
+});
+
+document.getElementById('order-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+
+  const year = document.getElementById('year').value;
+  const studentClass = document.getElementById('class').value;
+  const period = document.getElementById('period').value;
+  const items = [...document.querySelectorAll('input[name="item"]:checked')].map(cb => cb.value);
+
+  const user = auth.currentUser;
+
+  if (user && year && studentClass && period && items.length > 0) {
+    db.collection('orders').add({
+      name: user.displayName,
+      email: user.email,
+      year,
+      class: studentClass,
+      period,
+      items,
+      timestamp: firebase.firestore.FieldValue.serverTimestamp()
+    }).then(() => {
+      alert('Order placed successfully!');
+      document.getElementById('order-form').reset();
+    });
+  } else {
+    alert('Please complete all fields and select at least one item.');
+  }
+});
